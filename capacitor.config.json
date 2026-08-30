@@ -1,0 +1,9 @@
+{
+  "appId": "com.leerdarija.app",
+  "appName": "Leer Darija",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

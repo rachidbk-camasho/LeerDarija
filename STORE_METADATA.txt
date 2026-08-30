@@ -1,0 +1,29 @@
+APP STORE / PLAY STORE METADATA
+
+App name:
+Leer Darija
+
+Subtitle / short description:
+Leer Marokkaanse Darija vanuit het Nederlands
+
+Suggested category:
+Education
+
+Version:
+2.1.0
+
+Bundle ID / Package name:
+com.leerdarija.app
+
+Suggested keywords:
+darija, marokkaans, arabisch, marokko, taal leren, nederlands, taalapp
+
+Short description:
+Leer praktische Marokkaanse Darija met Nederlandse vertalingen, uitspraaknotatie, quizvragen en dagelijkse oefeningen.
+
+Long description:
+Leer Marokkaanse Darija stap voor stap vanuit het Nederlands. Oefen praktische woorden en zinnen voor alledaagse situaties zoals begroeten, eten, taxi, winkelen, familie en sociale gesprekken. De app bevat A1- en A2-lessen, quizvragen, dagelijkse oefeningen en uitspraakondersteuning.
+
+Privacy:
+De huidige app gebruikt geen account en verstuurt geen persoonlijke gegevens naar een externe server.
+Voortgang en score worden lokaal op het toestel opgeslagen.
