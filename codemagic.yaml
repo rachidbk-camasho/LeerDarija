@@ -29,6 +29,14 @@ workflows:
         script: |
           npx cap sync ios
 
+      - name: Check iOS project
+        script: |
+          echo "Contents of ios:"
+          ls -la "$CM_BUILD_DIR/ios"
+
+          echo "Contents of ios/App:"
+          ls -la "$CM_BUILD_DIR/ios/App"
+
       - name: Set up code signing
         script: |
           xcode-project use-profiles
@@ -36,18 +44,19 @@ workflows:
       - name: Set build number
         script: |
           cd "$CM_BUILD_DIR/ios/App"
-          agvtool new-version -all $BUILD_NUMBER
+          agvtool new-version -all "$BUILD_NUMBER"
 
       - name: Build IPA
         script: |
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/ios/App/App.xcworkspace" \
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
             --scheme "App"
 
     artifacts:
-      - build/ios/ipa/*.ipa
       - ios/App/build/**/*.ipa
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - ios/App/*.xcarchive
 
     publishing:
       app_store_connect:
