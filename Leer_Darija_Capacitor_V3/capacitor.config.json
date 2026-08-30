@@ -1,0 +1,9 @@
+{
+  "appId": "com.leerdarija.app",
+  "appName": "Leer Darija",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#f7f4ee"
+  }
+}

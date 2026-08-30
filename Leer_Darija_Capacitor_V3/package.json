@@ -1,0 +1,19 @@
+{
+  "name": "leer-darija",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Leer Darija - Capacitor iOS app",
+  "scripts": {
+    "ios:add": "npx cap add ios",
+    "sync": "npx cap sync",
+    "ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@leerdarija/storekit-bridge": "file:plugins/storekit-bridge"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0"
+  }
+}
