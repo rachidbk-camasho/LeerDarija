@@ -1,9 +1,125 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#8f1f32"><meta name="apple-mobile-web-app-capable" content="yes"><title>Leer Darija</title><link rel="stylesheet" href="styles.css"></head><body><main class="app"><div class="shell">
-<section id="homeView" class="view"><header class="hero"><div><div class="eyebrow">Nederlands → Marokkaanse Darija</div><h1>Leer Darija 🇲🇦</h1><p>Praktische woorden, zinnen en situaties voor dagelijks gebruik in Marokko. Start gratis en ontgrendel A1 en A2 wanneer je verder wilt.</p></div><div class="metrics"><div class="metric"><b id="lessonCount">0</b><span>lessen</span></div><div class="metric"><b id="phraseCount">0</b><span>onderdelen</span></div><div class="metric"><b id="score">0</b><span>quizpunten</span></div></div></header>
-<section id="storeSection" class="section"><div class="section-head"><div><h2>Niveaus</h2><p>Eenmalige aankoop, blijvend ontgrendeld.</p></div><button id="restore" class="btn ghost">Herstel aankopen</button></div><div class="store-grid"><article class="store-card"><div><h3>📘 A1 – Basis Darija</h3><p>Groeten, voorstellen, cijfers, tijd, eten, taxi, winkelen en familie.</p></div><div><div id="priceA1" class="price">App Store-prijs</div><button id="buyA1" class="btn primary">A1 ontgrendelen</button></div></article><article class="store-card"><div><h3>📗 A2 – Verder spreken</h3><p>Werkwoorden, vragen, thuis, gevoelens, sociaal gesprek en hulp.</p></div><div><div id="priceA2" class="price">App Store-prijs</div><button id="buyA2" class="btn primary">A2 ontgrendelen</button></div></article></div><div class="notice">De uiteindelijke prijs en valuta worden door de App Store getoond. A1 en A2 zijn opgezet als niet-verbruikbare aankopen: één keer kopen, toegang behouden.</div></section>
-<section class="section"><div class="section-head"><div><h2>Lessen</h2><p>Gratis starten of filteren op niveau.</p></div></div><div class="filters"><button class="pill active" data-filter="ALL">Alles</button><button class="pill" data-filter="FREE">Gratis</button><button class="pill" data-filter="A1">A1</button><button class="pill" data-filter="A2">A2</button></div><div id="lessonGrid" class="lesson-grid"></div></section>
-<section id="progressSection" class="section"><div class="section-head"><div><h2>Voortgang</h2><p>Je quizscore wordt lokaal op dit apparaat bewaard.</p></div></div></section>
-</section>
-<section id="lessonView" class="view hidden"><div class="topbar"><button id="back" class="icon-btn">← Terug</button><div class="titleline"><h1 id="lessonTitle"></h1><span id="lessonLevel" class="tag"></span></div></div><div id="cards" class="cards"></div><section id="paywall" class="paywall hidden"><div class="biglock">🔒</div><h2 id="paywallTitle"></h2><p id="paywallText"></p><div id="paywallPrice" class="price"></div><div class="paywall-actions"><button id="paywallBuy" class="btn primary">Koop niveau</button><button id="restore2" class="btn ghost">Herstel aankoop</button></div></section><section id="quiz" class="quiz"><div class="quiz-head"><h3>Mini-quiz</h3><span class="tag">Oefenen</span></div><div id="qArabic" class="arabic" style="margin-top:14px"></div><div id="qLatin" class="latin"></div><div id="answers" class="answers"></div><div id="feedback" class="feedback" aria-live="polite"></div><button id="nextQuestion" class="btn primary">Volgende vraag</button></section></section>
-<nav class="tabbar" aria-label="Hoofdnavigatie"><button class="active" data-tab="learn">Leren</button><button data-tab="store">Niveaus</button><button data-tab="progress">Voortgang</button></nav>
-</div></main><script src="lessons.js"></script><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#8f1f32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Leer Darija</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="app">
+  <div class="shell">
+
+    <section id="homeView" class="view">
+      <header class="hero">
+        <div class="eyebrow">Nederlands → Marokkaanse Darija</div>
+        <h1>Leer Darija 🇲🇦</h1>
+        <p>Leer stap voor stap. Begin gratis met Basis en ontgrendel A1 en A2 wanneer je verder wilt.</p>
+        <div class="metrics">
+          <div class="metric"><b id="lessonCount">0</b><span>lessen</span></div>
+          <div class="metric"><b id="phraseCount">0</b><span>onderdelen</span></div>
+          <div class="metric"><b id="score">0</b><span>quizpunten</span></div>
+        </div>
+      </header>
+
+      <section class="section level-section">
+        <div class="section-head compact">
+          <div>
+            <h2>Jouw leerpad</h2>
+            <p>Kies een niveau. Je ziet alleen de lessen die daarbij horen.</p>
+          </div>
+        </div>
+
+        <div class="level-tabs" role="tablist" aria-label="Leerniveau">
+          <button class="level-tab active" data-level="FREE" role="tab" aria-selected="true">
+            <span>Basis</span><small>Gratis</small>
+          </button>
+          <button class="level-tab" data-level="A1" role="tab" aria-selected="false">
+            <span>A1</span><small id="a1TabState">Premium</small>
+          </button>
+          <button class="level-tab" data-level="A2" role="tab" aria-selected="false">
+            <span>A2</span><small id="a2TabState">Premium</small>
+          </button>
+        </div>
+
+        <article id="levelIntro" class="level-intro">
+          <div class="level-intro-copy">
+            <div id="levelKicker" class="eyebrow dark">GRATIS START</div>
+            <h3 id="levelTitle">Basis</h3>
+            <p id="levelDescription">Leer de eerste woorden, begroetingen en de belangrijkste Darija-klanken.</p>
+          </div>
+          <div id="levelAction"></div>
+        </article>
+
+        <div id="lessonGrid" class="lesson-grid"></div>
+      </section>
+
+      <section id="progressSection" class="section progress-card">
+        <div class="section-head compact">
+          <div>
+            <h2>Voortgang</h2>
+            <p>Je quizscore wordt lokaal op dit apparaat bewaard.</p>
+          </div>
+          <div class="score-badge"><b id="scoreLarge">0</b><span>punten</span></div>
+        </div>
+      </section>
+
+      <section class="section purchase-help">
+        <button id="restore" class="text-action">Herstel eerdere aankopen</button>
+        <p id="storeNote" class="store-note">In TestFlight worden aankopen automatisch via Apple's sandbox getest en niet in rekening gebracht.</p>
+      </section>
+    </section>
+
+    <section id="lessonView" class="view hidden">
+      <div class="topbar">
+        <button id="back" class="back-btn" aria-label="Terug naar lessen">
+          <span class="back-arrow">‹</span><span>Terug</span>
+        </button>
+        <div class="titleline">
+          <h1 id="lessonTitle"></h1>
+          <span id="lessonLevel" class="tag"></span>
+        </div>
+      </div>
+
+      <div id="cards" class="cards"></div>
+
+      <section id="paywall" class="paywall hidden">
+        <div class="biglock">🔒</div>
+        <div class="eyebrow dark">PREMIUM NIVEAU</div>
+        <h2 id="paywallTitle"></h2>
+        <p id="paywallText"></p>
+        <div id="paywallPrice" class="price"></div>
+        <div id="paywallStatus" class="paywall-status"></div>
+        <div class="paywall-actions">
+          <button id="paywallBuy" class="btn primary">Ontgrendel niveau</button>
+          <button id="restore2" class="btn ghost">Herstel aankoop</button>
+        </div>
+        <p class="sandbox-note">Test je via TestFlight? Dan gebruikt Apple automatisch de sandbox en wordt de testtransactie niet in rekening gebracht.</p>
+      </section>
+
+      <section id="quiz" class="quiz">
+        <div class="quiz-head">
+          <h3>Mini-quiz</h3>
+          <span class="tag">Oefenen</span>
+        </div>
+        <div id="qArabic" class="arabic"></div>
+        <div id="qLatin" class="latin"></div>
+        <div id="answers" class="answers"></div>
+        <div id="feedback" class="feedback" aria-live="polite"></div>
+        <button id="nextQuestion" class="btn primary">Volgende vraag</button>
+      </section>
+    </section>
+
+    <nav class="tabbar" aria-label="Hoofdnavigatie">
+      <button class="active" data-tab="learn"><span>⌂</span><small>Leren</small></button>
+      <button data-tab="premium"><span>◈</span><small>Premium</small></button>
+      <button data-tab="progress"><span>◎</span><small>Voortgang</small></button>
+    </nav>
+  </div>
+</main>
+<script src="lessons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
