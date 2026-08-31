@@ -1,19 +1,27 @@
 {
   "name": "leer-darija",
-  "version": "4.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "Leer Darija - Capacitor iOS app",
+  "description": "Leer Marokkaanse Darija vanuit het Nederlands",
   "scripts": {
-    "ios:add": "npx cap add ios",
     "sync": "npx cap sync",
-    "ios": "npx cap open ios"
+    "copy": "npx cap copy",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android",
+    "add:ios": "npx cap add ios",
+    "add:android": "npx cap add android",
+    "doctor": "npx cap doctor"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/ios": "^8.0.0",
-    "@leerdarija/storekit-bridge": "file:plugins/storekit-bridge"
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/android": "^7.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/assets": "^3.0.5"
+  },
+  "allowScripts": {
+    "sharp@0.32.6": true
   }
 }
