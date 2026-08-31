@@ -1,319 +1,273 @@
 (() => {
-  const PRODUCTS = { A1: 'com.leerdarija.a1', A2: 'com.leerdarija.a2' };
-
-  const LEVELS = {
-    FREE: {
-      title: 'Basis',
-      kicker: 'GRATIS START',
-      description: 'Leer de eerste woorden, begroetingen en de belangrijkste Darija-klanken.'
-    },
-    A1: {
-      title: 'A1 – Basis Darija',
-      kicker: 'NIVEAU A1',
-      description: 'Praktische Darija voor voorstellen, cijfers, tijd, eten, taxi, winkelen en familie.'
-    },
-    A2: {
-      title: 'A2 – Verder spreken',
-      kicker: 'NIVEAU A2',
-      description: 'Bouw langere zinnen en leer vragen, werkwoorden, gevoelens en sociale gesprekken.'
-    }
-  };
+  const SUBSCRIPTION_ID = 'com.leerdarija.premium.yearly';
 
   const state = {
-    level: 'FREE',
-    current: null,
-    score: Number(localStorage.getItem('score') || 0),
-    entitlements: new Set(JSON.parse(localStorage.getItem('entitlements') || '[]')),
-    products: {},
-    storeAvailable: false,
-    storeChecked: false
+    activeView: 'homeView',
+    levelFilter: 'ALL',
+    score: Number(localStorage.getItem('darijaScore') || 0),
+    learned: new Set(JSON.parse(localStorage.getItem('darijaLearned') || '[]')),
+    currentLesson: null,
+    product: null,
+    premium: false,
+    storeChecked: false,
+    lastLessonId: localStorage.getItem('darijaLastLesson') || null
   };
 
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
-  const allItems = () => window.LESSONS.flatMap(l => l.items);
-  const isUnlockedTier = tier => tier === 'FREE' || state.entitlements.has(tier);
-  const isUnlocked = lesson => isUnlockedTier(lesson.tier);
-  const productIdFor = tier => PRODUCTS[tier];
+  const lessons = () => window.LESSONS || [];
+  const allItems = () => lessons().flatMap(l => l.items || []);
+  const store = () => window.Capacitor?.Plugins?.StoreKitBridge || null;
 
-  function nativeStore() {
-    return window.Capacitor?.Plugins?.StoreKitBridge || null;
+  function saveLearned() {
+    localStorage.setItem('darijaLearned', JSON.stringify([...state.learned]));
   }
 
-  function saveEntitlements() {
-    localStorage.setItem('entitlements', JSON.stringify([...state.entitlements]));
-  }
-
-  function show(view, smooth = false) {
+  function setView(id, updateNav = true) {
     $$('.view').forEach(v => v.classList.add('hidden'));
-    $('#' + view).classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+    $('#' + id).classList.remove('hidden');
+    state.activeView = id;
+
+    const showNav = !['lessonView', 'paywallView'].includes(id);
+    $('#bottomNav').classList.toggle('hidden', !showNav);
+
+    if (updateNav && showNav) {
+      $$('.nav-button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
-  function setBottomTab(name) {
-    $$('.tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  function subscriptionPrice() {
+    return state.product?.displayPrice || (state.storeChecked ? 'Niet beschikbaar' : 'Prijs laden…');
   }
 
-  function productFor(tier) {
-    return state.products[productIdFor(tier)] || null;
+  function renderMembership() {
+    $('#subscriptionPrice').textContent = subscriptionPrice();
+
+    if (state.premium) {
+      $('#membershipPill').textContent = '✦ Premium';
+      $('#membershipStatus').textContent = 'Premium actief';
+      $('#membershipBadge').textContent = 'Actief';
+      $('#membershipBadge').classList.add('active-premium');
+      $('#membershipDetail').textContent = 'Alle Basis-, A1- en A2-lessen zijn beschikbaar.';
+      $('#profileSubscribe').textContent = 'Premium actief';
+      $('#profileSubscribe').disabled = true;
+    } else {
+      $('#membershipPill').textContent = '7 dagen gratis';
+      $('#membershipStatus').textContent = 'Geen actief abonnement';
+      $('#membershipBadge').textContent = 'Gratis';
+      $('#membershipBadge').classList.remove('active-premium');
+      $('#membershipDetail').textContent = 'Start je 7-daagse gratis proefperiode om alle lessen te openen.';
+      $('#profileSubscribe').textContent = 'Start 7 dagen gratis';
+      $('#profileSubscribe').disabled = false;
+    }
   }
 
-  function productLabel(tier) {
-    const p = productFor(tier);
-    if (p?.displayPrice) return p.displayPrice;
-    if (!state.storeChecked) return 'Prijs laden…';
-    return 'Niet beschikbaar';
-  }
-
-  function storeErrorText(tier) {
-    if (!nativeStore()) return 'Open de geïnstalleerde iOS/TestFlight-app om aankopen te testen.';
-    if (state.storeChecked && !productFor(tier)) {
-      return `Apple levert ${productIdFor(tier)} nog niet aan. Controleer het In-App Purchase-product in App Store Connect.`;
+  function storeMessage() {
+    if (!store()) return 'Abonnementen zijn alleen beschikbaar in de geïnstalleerde iOS/TestFlight-app.';
+    if (state.storeChecked && !state.product) {
+      return `Apple geeft ${SUBSCRIPTION_ID} nog niet terug. Controleer het abonnement in App Store Connect en probeer later opnieuw.`;
     }
     return '';
   }
 
   async function initStore() {
-    const store = nativeStore();
-    state.storeAvailable = !!store;
-
-    if (!store) {
+    const bridge = store();
+    if (!bridge) {
       state.storeChecked = true;
-      renderAll();
+      renderMembership();
+      $('#storeStatus').textContent = storeMessage();
       return;
     }
 
     try {
-      const products = await store.getProducts({ ids: Object.values(PRODUCTS) });
-      state.products = {};
-      (products.products || []).forEach(p => state.products[p.id] = p);
+      const response = await bridge.getProducts({ ids: [SUBSCRIPTION_ID] });
+      state.product = (response.products || []).find(p => p.id === SUBSCRIPTION_ID) || null;
 
-      const e = await store.getEntitlements();
-      (e.productIds || []).forEach(id => {
-        if (id === PRODUCTS.A1) state.entitlements.add('A1');
-        if (id === PRODUCTS.A2) state.entitlements.add('A2');
-      });
-      saveEntitlements();
-    } catch (err) {
-      console.warn('StoreKit init', err);
+      const entitlements = await bridge.getEntitlements();
+      state.premium = (entitlements.productIds || []).includes(SUBSCRIPTION_ID);
+    } catch (e) {
+      console.warn('StoreKit init failed', e);
     } finally {
       state.storeChecked = true;
-      renderAll();
+      renderMembership();
+      $('#storeStatus').textContent = storeMessage();
+      renderHome();
+      renderLessons();
     }
   }
 
-  async function buy(tier) {
-    const store = nativeStore();
-    const product = productFor(tier);
+  async function startSubscription() {
+    const bridge = store();
 
-    if (!store) {
-      alert('Aankopen zijn alleen beschikbaar in de geïnstalleerde iOS/TestFlight-app.');
+    if (!bridge) {
+      $('#storeStatus').textContent = 'Open deze build via TestFlight op iPhone om de gratis proefperiode te testen.';
+      setView('paywallView', false);
       return;
     }
-    if (!product) {
-      alert(`Dit testproduct is nog niet beschikbaar via Apple. Controleer in App Store Connect of ${productIdFor(tier)} bestaat, een prijs heeft en beschikbaar is voor verkoop.`);
+
+    if (!state.product) {
+      $('#storeStatus').textContent = storeMessage();
+      setView('paywallView', false);
       return;
     }
 
     try {
-      const r = await store.purchase({ id: productIdFor(tier) });
-      if (r.purchased) {
-        state.entitlements.add(tier);
-        saveEntitlements();
-        renderAll();
-        if (state.current?.tier === tier) openLesson(state.current.id);
-      } else if (r.pending) {
-        alert('De aankoop wacht nog op goedkeuring.');
+      const result = await bridge.purchase({ id: SUBSCRIPTION_ID });
+      if (result.purchased) {
+        state.premium = true;
+        renderMembership();
+        renderHome();
+        renderLessons();
+        setView('homeView');
+      } else if (result.pending) {
+        $('#storeStatus').textContent = 'De aankoop wacht nog op goedkeuring.';
       }
-    } catch (err) {
-      const msg = String(err?.message || err).toLowerCase();
-      if (msg.includes('cancel') || msg.includes('user_cancelled')) return;
-      alert('De aankoop kon niet worden afgerond. Controleer de TestFlight/App Store Connect-configuratie en probeer opnieuw.');
+    } catch (e) {
+      const message = String(e?.message || e).toLowerCase();
+      if (message.includes('cancel')) return;
+      $('#storeStatus').textContent = 'De proefperiode kon niet worden gestart. Controleer je TestFlight- en App Store Connect-configuratie.';
     }
   }
 
-  async function restore() {
-    const store = nativeStore();
-    if (!store) {
+  async function restorePurchases() {
+    const bridge = store();
+    if (!bridge) {
       alert('Herstellen is alleen beschikbaar in de geïnstalleerde iOS/TestFlight-app.');
       return;
     }
+
     try {
-      await store.restore();
-      await initStore();
-      alert('Aankopen zijn hersteld.');
-    } catch (e) {
-      alert('Herstellen is niet gelukt.');
+      await bridge.restore();
+      const entitlements = await bridge.getEntitlements();
+      state.premium = (entitlements.productIds || []).includes(SUBSCRIPTION_ID);
+      renderMembership();
+      renderHome();
+      renderLessons();
+      alert(state.premium ? 'Je Premium-toegang is hersteld.' : 'Er is geen actief abonnement gevonden.');
+    } catch {
+      alert('Herstellen is niet gelukt. Probeer het later opnieuw.');
     }
   }
 
-  function setLevel(level, scroll = false) {
-    state.level = level;
-    $$('.level-tab').forEach(b => {
-      const active = b.dataset.level === level;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-selected', String(active));
-    });
-
-    const cfg = LEVELS[level];
-    $('#levelKicker').textContent = cfg.kicker;
-    $('#levelTitle').textContent = cfg.title;
-    $('#levelDescription').textContent = cfg.description;
-
-    renderLevelAction();
-    renderLessons();
-
-    if (scroll) {
-      requestAnimationFrame(() => $('.level-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
+  function lessonLabel(l) {
+    if (l.tier === 'FREE') return 'Basis';
+    return l.level || l.tier;
   }
 
-  function renderLevelAction() {
-    const host = $('#levelAction');
-    host.innerHTML = '';
+  function renderHome() {
+    const total = allItems().length;
+    const learned = state.learned.size;
+    const pct = total ? Math.min(100, Math.round((learned / total) * 100)) : 0;
 
-    if (state.level === 'FREE') {
-      const badge = document.createElement('div');
-      badge.className = 'included-badge';
-      badge.textContent = '✓ Inbegrepen';
-      host.appendChild(badge);
-      return;
+    $('#totalCount').textContent = total;
+    $('#learnedCount').textContent = learned;
+    $('#scoreCount').textContent = state.score;
+    $('#progressPercent').textContent = pct + '%';
+    $('#progressFill').style.width = pct + '%';
+
+    const preferred = lessons().find(l => l.id === state.lastLessonId) || lessons()[0];
+    if (preferred) {
+      $('#continueTitle').textContent = preferred.title;
+      $('#continueSubtitle').textContent = `${lessonLabel(preferred)} · ${preferred.items.length} onderdelen`;
+      $('#continueButton').onclick = () => requestLesson(preferred);
     }
 
-    const tier = state.level;
-    const owned = state.entitlements.has(tier);
+    renderMembership();
+  }
 
-    if (owned) {
-      const badge = document.createElement('div');
-      badge.className = 'included-badge';
-      badge.textContent = '✓ Ontgrendeld';
-      host.appendChild(badge);
-      return;
-    }
-
-    const box = document.createElement('div');
-    box.className = 'level-buy';
-    const price = document.createElement('span');
-    price.className = 'level-price';
-    price.textContent = productLabel(tier);
-    const btn = document.createElement('button');
-    btn.className = 'btn primary compact-btn';
-    btn.textContent = `${tier} ontgrendelen`;
-    btn.disabled = state.storeChecked && !productFor(tier);
-    btn.onclick = () => buy(tier);
-    box.append(price, btn);
-
-    const err = storeErrorText(tier);
-    if (err) {
-      const note = document.createElement('small');
-      note.className = 'product-warning';
-      note.textContent = err;
-      box.appendChild(note);
-    }
-    host.appendChild(box);
+  function levelTitle(tier) {
+    if (tier === 'FREE') return 'Basis';
+    return tier;
   }
 
   function renderLessons() {
-    const list = $('#lessonGrid');
-    list.innerHTML = '';
+    const host = $('#lessonList');
+    host.innerHTML = '';
 
-    window.LESSONS
-      .filter(l => l.tier === state.level)
-      .forEach(l => {
-        const unlocked = isUnlocked(l);
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'lesson-card lesson-link' + (unlocked ? '' : ' locked');
-        el.setAttribute('aria-label', `${l.title}${unlocked ? '' : ', premium'}`);
-        el.innerHTML = `
-          <div class="lesson-leading">
-            <div class="emoji">${l.emoji}</div>
-            <div class="lesson-copy">
-              <div class="lesson-title-row">
-                <h3>${l.title}</h3>
-                ${unlocked ? '' : '<span class="mini-lock">🔒</span>'}
-              </div>
-              <p>${l.subtitle}</p>
-              <span class="tag">${l.level} · ${l.items.length} onderdelen</span>
-            </div>
-          </div>
-          <div class="lesson-trailing" aria-hidden="true">
-            ${unlocked ? '<span class="chevron">›</span>' : `<span class="locked-label">${productLabel(l.tier)}</span><span class="chevron">›</span>`}
-          </div>`;
-        el.addEventListener('click', () => openLesson(l.id));
-        list.appendChild(el);
-      });
+    const filtered = lessons().filter(l => state.levelFilter === 'ALL' || l.tier === state.levelFilter);
+    let lastTier = null;
 
-    if (!list.children.length) {
-      list.innerHTML = '<div class="empty-state">Er zijn nog geen lessen in dit niveau.</div>';
+    filtered.forEach(l => {
+      if (state.levelFilter === 'ALL' && l.tier !== lastTier) {
+        const divider = document.createElement('div');
+        divider.className = 'level-divider';
+        divider.innerHTML = `<strong>${levelTitle(l.tier)}</strong><span>${l.tier === 'FREE' ? 'start' : 'niveau'}</span>`;
+        host.appendChild(divider);
+        lastTier = l.tier;
+      }
+
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'lesson-row';
+      row.innerHTML = `
+        <div class="lesson-emoji">${l.emoji}</div>
+        <div class="lesson-info">
+          <strong>${l.title}</strong>
+          <span>${lessonLabel(l)} · ${l.items.length} onderdelen</span>
+        </div>
+        <div class="lesson-arrow">${state.premium ? '›' : '›'}</div>`;
+      row.onclick = () => requestLesson(l);
+      host.appendChild(row);
+    });
+  }
+
+  function requestLesson(l) {
+    if (!state.premium) {
+      state.currentLesson = l;
+      $('#storeStatus').textContent = storeMessage();
+      setView('paywallView', false);
+      return;
     }
+    openLesson(l);
   }
 
-  function renderHeader() {
-    $('#lessonCount').textContent = window.LESSONS.length;
-    $('#phraseCount').textContent = allItems().length;
-    $('#score').textContent = state.score;
-    $('#scoreLarge').textContent = state.score;
-    $('#a1TabState').textContent = state.entitlements.has('A1') ? 'Open' : 'Premium';
-    $('#a2TabState').textContent = state.entitlements.has('A2') ? 'Open' : 'Premium';
-  }
-
-  function renderAll() {
-    renderHeader();
-    setLevel(state.level);
+  function markLearned(l, index) {
+    state.learned.add(`${l.id}:${index}`);
+    saveLearned();
+    renderHome();
   }
 
   function speak(text) {
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ar-MA';
-    u.rate = .82;
-    speechSynthesis.speak(u);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ar-MA';
+    utterance.rate = .82;
+    speechSynthesis.speak(utterance);
   }
 
-  function openLesson(id) {
-    const l = window.LESSONS.find(x => x.id === id);
-    if (!l) return;
+  function openLesson(l) {
+    state.currentLesson = l;
+    state.lastLessonId = l.id;
+    localStorage.setItem('darijaLastLesson', l.id);
 
-    state.current = l;
-    setBottomTab('learn');
-    $('#lessonTitle').textContent = `${l.emoji} ${l.title}`;
-    $('#lessonLevel').textContent = l.level;
+    $('#lessonTopTitle').textContent = `${l.emoji} ${l.title}`;
+    $('#lessonTopLevel').textContent = lessonLabel(l);
+    const host = $('#lessonContent');
+    host.innerHTML = '';
 
-    const unlocked = isUnlocked(l);
-    $('#cards').innerHTML = '';
-    $('#quiz').classList.toggle('hidden', !unlocked);
-    $('#paywall').classList.toggle('hidden', unlocked);
-
-    if (!unlocked) {
-      $('#paywallTitle').textContent = `Ontgrendel ${l.tier}`;
-      $('#paywallText').textContent = `Deze les hoort bij ${l.tier}. Met één aankoop ontgrendel je alle lessen van dit niveau.`;
-      $('#paywallPrice').textContent = productLabel(l.tier);
-      $('#paywallStatus').textContent = storeErrorText(l.tier);
-      const buyBtn = $('#paywallBuy');
-      buyBtn.textContent = `Ontgrendel ${l.tier}`;
-      buyBtn.disabled = state.storeChecked && !productFor(l.tier);
-      buyBtn.onclick = () => buy(l.tier);
-      show('lessonView');
-      return;
-    }
-
-    l.items.forEach(item => {
-      const c = document.createElement('article');
-      c.className = 'card';
-      c.innerHTML = `<div class="arabic">${item[0]}</div><div class="latin">${item[1]}</div><div class="nl">${item[2]}</div>`;
-      const b = document.createElement('button');
-      b.className = 'listen-action';
-      b.type = 'button';
-      b.innerHTML = '<span>🔊</span><span>Luister</span>';
-      b.onclick = () => speak(item[0]);
-      c.appendChild(b);
-      $('#cards').appendChild(c);
+    l.items.forEach((item, index) => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="arabic">${item[0]}</div>
+        <div class="latin">${item[1]}</div>
+        <div class="nl">${item[2]}</div>`;
+      const listen = document.createElement('button');
+      listen.type = 'button';
+      listen.className = 'listen-action';
+      listen.textContent = '🔊 Luister';
+      listen.onclick = () => {
+        speak(item[0]);
+        markLearned(l, index);
+      };
+      card.appendChild(listen);
+      host.appendChild(card);
     });
 
     newQuestion();
-    show('lessonView');
+    setView('lessonView', false);
   }
 
   function shuffle(a) {
@@ -321,72 +275,74 @@
   }
 
   function newQuestion() {
-    const l = state.current;
-    if (!l || !isUnlocked(l)) return;
+    const l = state.currentLesson;
+    if (!l?.items?.length) return;
+    const current = l.items[Math.floor(Math.random() * l.items.length)];
 
-    const pool = l.items;
-    const current = pool[Math.floor(Math.random() * pool.length)];
     $('#qArabic').textContent = current[0];
     $('#qLatin').textContent = current[1];
-    $('#answers').innerHTML = '';
     $('#feedback').textContent = '';
+    $('#answers').innerHTML = '';
 
-    const opts = shuffle([current, ...shuffle(pool.filter(x => x !== current && x[2] !== current[2])).slice(0, 3)]);
-    opts.forEach(o => {
-      const b = document.createElement('button');
-      b.className = 'answer';
-      b.textContent = o[2];
-      b.onclick = () => {
+    const options = shuffle([current, ...shuffle(l.items.filter(x => x !== current && x[2] !== current[2])).slice(0, 3)]);
+    options.forEach(option => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'answer';
+      button.textContent = option[2];
+      button.onclick = () => {
         $$('#answers .answer').forEach(x => x.disabled = true);
-        if (o === current) {
-          b.classList.add('ok');
-          $('#feedback').textContent = '✅ Goed!';
-          state.score++;
-          localStorage.setItem('score', state.score);
-          renderHeader();
+        if (option === current) {
+          button.classList.add('ok');
+          $('#feedback').textContent = '✓ Goed';
+          state.score += 1;
+          localStorage.setItem('darijaScore', state.score);
+          renderHome();
         } else {
-          b.classList.add('bad');
-          $('#feedback').textContent = '❌ ' + current[2];
+          button.classList.add('bad');
+          $('#feedback').textContent = 'Juist antwoord: ' + current[2];
           $$('#answers .answer').forEach(x => {
             if (x.textContent === current[2]) x.classList.add('ok');
           });
         }
       };
-      $('#answers').appendChild(b);
+      $('#answers').appendChild(button);
     });
   }
 
-  $$('.level-tab').forEach(b => b.addEventListener('click', () => setLevel(b.dataset.level)));
-
-  $('#back').onclick = () => {
-    setBottomTab('learn');
-    show('homeView');
-    requestAnimationFrame(() => $('.level-section')?.scrollIntoView({ block: 'start' }));
-  };
-
-  $('#nextQuestion').onclick = newQuestion;
-  $('#restore').onclick = restore;
-  $('#restore2').onclick = restore;
-
-  $$('.tabbar button').forEach(b => b.onclick = () => {
-    const tab = b.dataset.tab;
-    setBottomTab(tab);
-    show('homeView');
-
-    if (tab === 'learn') {
-      setLevel('FREE');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  function startDaily() {
+    if (!state.premium) {
+      $('#storeStatus').textContent = storeMessage();
+      setView('paywallView', false);
+      return;
     }
-    if (tab === 'premium') {
-      const tier = state.entitlements.has('A1') && !state.entitlements.has('A2') ? 'A2' : 'A1';
-      setLevel(tier);
-      requestAnimationFrame(() => $('.level-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
-    if (tab === 'progress') {
-      requestAnimationFrame(() => $('#progressSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
+    const l = lessons()[Math.floor(Math.random() * lessons().length)];
+    openLesson(l);
+  }
+
+  $$('.nav-button').forEach(button => {
+    button.addEventListener('click', () => setView(button.dataset.view));
   });
 
-  renderAll();
+  $$('.segment').forEach(button => {
+    button.addEventListener('click', () => {
+      state.levelFilter = button.dataset.level;
+      $$('.segment').forEach(x => x.classList.toggle('active', x === button));
+      renderLessons();
+    });
+  });
+
+  $('#membershipPill').onclick = () => setView(state.premium ? 'profileView' : 'paywallView', false);
+  $('#profileSubscribe').onclick = () => setView('paywallView', false);
+  $('#startTrial').onclick = startSubscription;
+  $('#restorePurchases').onclick = restorePurchases;
+  $('#paywallRestore').onclick = restorePurchases;
+  $('#paywallClose').onclick = () => setView(state.activeView === 'paywallView' ? 'homeView' : 'homeView');
+  $('#lessonBack').onclick = () => setView('learnView');
+  $('#nextQuestion').onclick = newQuestion;
+  $('#dailyCard').onclick = startDaily;
+
+  renderHome();
+  renderLessons();
   initStore();
 })();
