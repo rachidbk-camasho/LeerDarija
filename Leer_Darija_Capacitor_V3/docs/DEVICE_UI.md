@@ -16,3 +16,13 @@ Technisch:
 - geen vaste schermhoogtes
 - grotere grid-layouts op iPad
 - reduced-motion ondersteuning
+
+
+## V3.1 UX-aanpassingen
+- onderste hoofdnavigatie is altijd zichtbaar en houdt rekening met de iOS home indicator
+- extra onderruimte voorkomt dat lesinhoud achter de navigatie verdwijnt
+- lesheader met Terug-knop blijft sticky en blijft onder notch/Dynamic Island
+- Terug-knop en quiz/navigatieknoppen hebben grotere touch targets (48–54pt)
+- titels en kaarten wrappen correct op smalle iPhones en veroorzaken geen horizontale overflow
+- store cards stapelen op smalle schermen
+- Niveaus/Voortgang tabs openen eerst Home en scrollen daarna naar het juiste onderdeel
