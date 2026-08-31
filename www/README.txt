@@ -1,1 +1,0 @@
-Upload deze bestanden naar Netlify. Open daarna de site in Safari en kies Delen > Zet op beginscherm.

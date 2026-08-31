@@ -1,9 +1,0 @@
-{
-  "name": "Leer Darija",
-  "short_name": "Darija",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#f5f2ec",
-  "theme_color": "#8d1d2c",
-  "icons": []
-}
